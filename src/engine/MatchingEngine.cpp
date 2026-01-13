@@ -24,33 +24,7 @@ std::vector<Trade> MatchingEngine::matchOrder(Order& incomingOrder) {
             }
 
             // Match against orders at this level
-            while (!levelOrders.empty() && incomingOrder.quantity > 0) {
-                auto& restingOrder = levelOrders.front();
-                
-                double matchQty = std::min(incomingOrder.quantity, restingOrder.quantity);
-                
-                Trade trade;
-                trade.restingOrderId = restingOrder.id;
-                trade.aggressiveOrderId = incomingOrder.id;
-                trade.price = bestAskPrice;
-                trade.quantity = matchQty;
-                trade.timestamp = incomingOrder.timestamp; // Match time = arrival time
-                trade.aggressiveSide = Side::Buy;
-                trades.push_back(trade);
-
-                incomingOrder.quantity -= matchQty;
-                restingOrder.quantity -= matchQty;
-
-                if (restingOrder.quantity <= 1e-9) { // Epsilon check
-                    // Remove from lookup
-                    orderBook.orderLookup.erase(restingOrder.id);
-                    // Remove from list
-                    levelOrders.pop_front();
-                }
-            }
-
-            // If level executed, remove it
-            if (levelOrders.empty()) {
+            if (processOrderLevel(incomingOrder, levelOrders, bestAskPrice, Side::Buy, trades)) {
                 orderBook.asks.erase(bestAskIt);
             }
 
@@ -67,30 +41,7 @@ std::vector<Trade> MatchingEngine::matchOrder(Order& incomingOrder) {
             }
 
             // Match against orders at this level
-            while (!levelOrders.empty() && incomingOrder.quantity > 0) {
-                auto& restingOrder = levelOrders.front();
-                
-                double matchQty = std::min(incomingOrder.quantity, restingOrder.quantity);
-                
-                Trade trade;
-                trade.restingOrderId = restingOrder.id;
-                trade.aggressiveOrderId = incomingOrder.id;
-                trade.price = bestBidPrice; // Trade happens at resting price
-                trade.quantity = matchQty;
-                trade.timestamp = incomingOrder.timestamp;
-                trade.aggressiveSide = Side::Sell;
-                trades.push_back(trade);
-
-                incomingOrder.quantity -= matchQty;
-                restingOrder.quantity -= matchQty;
-
-                if (restingOrder.quantity <= 1e-9) {
-                    orderBook.orderLookup.erase(restingOrder.id);
-                    levelOrders.pop_front();
-                }
-            }
-
-            if (levelOrders.empty()) {
+            if (processOrderLevel(incomingOrder, levelOrders, bestBidPrice, Side::Sell, trades)) {
                 orderBook.bids.erase(bestBidIt);
             }
         }

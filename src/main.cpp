@@ -7,18 +7,15 @@ int main() {
 
     std::cout << "Initializing Simulation..." << std::endl;
 
-    // Simulation Parameters
-    double T = 600.0;    // 10 minutes session
-    double dt = 0.05;    // 50ms time step
+    double T = 600.0;
+    double dt = 0.05;
     
-    // Model Parameters
-    double latencyMean = 0.05; // 50ms latency
+    double latencyMean = 0.05;
     double latencyStd = 0.01;
     
-    // AS Strategy Parameters
-    double gamma = 0.1;  // Risk aversion
-    double sigma = 2.0;  // Volatility
-    double k = 1.5;      // Intensity
+    double gamma = 0.1;
+    double sigma = 2.0;
+    double k = 1.5;
 
     OrderBook book;
     LatencyModel latency(latencyMean, latencyStd);

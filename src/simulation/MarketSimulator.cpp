@@ -8,7 +8,6 @@ namespace lob {
 MarketSimulator::MarketSimulator(OrderBook& book, MatchingEngine& matchingEngine, MarketMaker& strategy, LatencyModel& latencyModel)
     : book(book), matchingEngine(matchingEngine), strategy(strategy), latencyModel(latencyModel), currentTime(0.0) {
     
-    // Open logs
     tradeLog.open("trades.csv");
     tradeLog << "timestamp,price,quantity,side,resting_id,aggressive_id\n";
     
@@ -31,38 +30,32 @@ void MarketSimulator::run(double duration, double dt) {
     for (double t = 0; t < duration; t += dt) {
         currentTime = t;
 
-        // 1. Process Latency Queue
+        // Process Latency Queue
         auto readyEvents = latencyModel.getReadyOrders(currentTime);
         for (const auto& ev : readyEvents) {
             if (ev.isCancellation) {
                 book.cancelOrder(ev.orderIdToCancel);
             } else {
-                // Incoming Order
                 Order ord = ev.order;
-                
-                // Match order
                 auto trades = matchingEngine.matchOrder(ord);
                 
-                // Log trades
                 for (const auto& tr : trades) {
                     tradeLog << tr.timestamp << "," << tr.price << "," << tr.quantity << "," 
                              << (tr.aggressiveSide == Side::Buy ? "Buy" : "Sell") << ","
                              << tr.restingOrderId << "," << tr.aggressiveOrderId << "\n";
                              
-                    // MM Tracking
-                    if (tr.restingOrderId == mmBidId) mmInventory += tr.quantity; // We bought
-                    if (tr.restingOrderId == mmAskId) mmInventory -= tr.quantity; // We sold
+                    if (tr.restingOrderId == mmBidId) mmInventory += tr.quantity;
+                    if (tr.restingOrderId == mmAskId) mmInventory -= tr.quantity;
                 }
             }
         }
 
-        // 2. Generate Background Noise
+        // Generate Background Noise
         if (t >= nextArrivalTime) {
             currentFairPrice += priceMoveDist(gen);
             
             Side side = (rand() % 2 == 0) ? Side::Buy : Side::Sell;
             double quantity = (int)sizeDist(gen);
-            
             bool isAggressive = (rand() % 10 < 3); 
             
             double price;
@@ -80,7 +73,7 @@ void MarketSimulator::run(double duration, double dt) {
             nextArrivalTime += arrivalDist(gen);
         }
         
-        // 3. Strategy Update
+        // Strategy Update
         std::pair<double, double> quotes = strategy.getQuotes(book, mmInventory, t);
         
         double targetBid = quotes.first;
@@ -100,10 +93,7 @@ void MarketSimulator::run(double duration, double dt) {
             latencyModel.addOrder(askOrder, t);
         }
 
-        // 4. Log Book State
-        if ((int)t % 10 == 0) { 
-            logState();
-        }
+        if ((int)t % 10 == 0) logState();
         
         quoteLog << t << "," << targetBid << "," << targetAsk << "," << (targetBid+targetAsk)/2.0 << "\n";
     }
