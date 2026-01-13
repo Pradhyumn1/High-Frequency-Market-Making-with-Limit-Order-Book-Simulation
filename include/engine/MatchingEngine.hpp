@@ -26,6 +26,8 @@ public:
 
 private:
     OrderBook& orderBook;
+    
+    bool processOrderLevel(Order& incomingOrder, std::list<Order>& levelOrders, double price, Side aggressiveSide, std::vector<Trade>& trades);
 };
 
 } // namespace lob

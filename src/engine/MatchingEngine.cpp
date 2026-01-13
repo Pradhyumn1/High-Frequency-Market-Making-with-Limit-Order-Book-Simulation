@@ -57,4 +57,30 @@ std::vector<Trade> MatchingEngine::matchOrder(Order& incomingOrder) {
     return trades;
 }
 
+bool MatchingEngine::processOrderLevel(Order& incomingOrder, std::list<Order>& levelOrders, double price, Side aggressiveSide, std::vector<Trade>& trades) {
+    while (!levelOrders.empty() && incomingOrder.quantity > 0) {
+        auto& restingOrder = levelOrders.front();
+        
+        double matchQty = std::min(incomingOrder.quantity, restingOrder.quantity);
+        
+        Trade trade;
+        trade.restingOrderId = restingOrder.id;
+        trade.aggressiveOrderId = incomingOrder.id;
+        trade.price = price;
+        trade.quantity = matchQty;
+        trade.timestamp = incomingOrder.timestamp;
+        trade.aggressiveSide = aggressiveSide;
+        trades.push_back(trade);
+
+        incomingOrder.quantity -= matchQty;
+        restingOrder.quantity -= matchQty;
+
+        if (restingOrder.quantity <= 1e-9) {
+            orderBook.orderLookup.erase(restingOrder.id);
+            levelOrders.pop_front();
+        }
+    }
+    return levelOrders.empty();
+}
+
 } // namespace lob
